@@ -19,24 +19,24 @@
 
 ### Install `tabulate`:
 
-\```bash
+```bash
 pip install tabulate
-\```
+```
 
 ## Installation
 
 1. **Clone the Repository**:
 
-\```bash
+```bash
 git clone https://github.com/yourusername/sshmgr.git
 cd sshmgr
-\```
+```
 
 2. **Make the Script Executable**:
 
-\```bash
+```bash
 chmod +x sshmgr.py
-\```
+```
 
 3. **Add to PATH (Optional)**:
 
@@ -48,70 +48,70 @@ Run the script with the appropriate command-line flags:
 
 ### List Servers
 
-\```bash
+```bash
 ./sshmgr.py --list
-\```
+```
 
 ### Add a New Server
 
-\```bash
+```bash
 ./sshmgr.py --add
-\```
+```
 
 ### Delete a Server
 
-\```bash
+```bash
 ./sshmgr.py --delete
-\```
+```
 
 ### Connect to a Server by Alias
 
-\```bash
+```bash
 ./sshmgr.py --connect <alias>
-\```
+```
 
 ### Import Servers from SSH Config
 
-\```bash
+```bash
 ./sshmgr.py --import-config
-\```
+```
 
 ### Search for Servers
 
-\```bash
+```bash
 ./sshmgr.py --search <query>
-\```
+```
 
 ### Display Help Menu
 
-\```bash
+```bash
 ./sshmgr.py --help
-\```
+```
 
 ## Examples
 
 - **Add a New Server**:
-\```bash
+```bash
 ./sshmgr.py --add
-\```
+```
   Follow the interactive prompts to input server details.
 
 - **Connect to a Server**:
-\```bash
+```bash
 ./sshmgr.py --connect myserver
-\```
+```
   Connects to the server with alias `myserver`.
 
 - **Import SSH Configurations**:
-\```bash
+```bash
 ./sshmgr.py --import-config
-\```
+```
   Imports SSH hosts from the user's SSH config file (`~/.ssh/config`).
 
 - **Search for Servers**:
-\```bash
+```bash
 ./sshmgr.py --search production
-\```
+```
   Searches for servers containing the term "production" in their details.
 
 ## Contributing
