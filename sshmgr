@@ -1,0 +1,228 @@
+#!/usr/bin/env python3
+
+import os
+import sqlite3
+import argparse
+import subprocess
+from tabulate import tabulate
+import re
+
+# Define the path for the SQLite database
+DB_PATH = os.path.expanduser('~/.local/share/sshmgr/servers.db')
+
+# Ensure the database directory exists
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+def init_db():
+    """Initialize the SQLite database if it doesn't exist."""
+    if not os.path.exists(DB_PATH):
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE servers (
+                alias TEXT PRIMARY KEY,
+                hostname TEXT NOT NULL,
+                username TEXT NOT NULL,
+                port INTEGER DEFAULT 22,
+                ssh_key TEXT,
+                environment TEXT,
+                description TEXT
+            )
+        ''')
+        conn.commit()
+        conn.close()
+        print(f"Database created at {DB_PATH}")
+
+def list_servers():
+    """List all servers in the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM servers')
+    rows = cursor.fetchall()
+    if rows:
+        headers = ["Alias", "Hostname", "Username", "Port", "SSH Key", "Environment", "Description"]
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
+    else:
+        print("No servers found.")
+    conn.close()
+
+def add_server():
+    """Add a new server to the database interactively."""
+    alias = input("Enter alias: ")
+    hostname = input("Enter hostname or IP address: ")
+    username = input("Enter username: ")
+    port = input("Enter SSH port (default 22): ") or 22
+    ssh_key = input("Enter path to SSH key (leave blank for default): ")
+    environment = input("Enter environment (e.g., production, staging): ")
+    description = input("Enter description: ")
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                       (alias, hostname, username, port, ssh_key, environment, description))
+        conn.commit()
+        print("Server added successfully.")
+    except sqlite3.IntegrityError:
+        print("Alias already exists. Use a different alias.")
+    conn.close()
+
+def delete_server():
+    """Delete a server from the database interactively."""
+    alias = input("Enter alias of the server to delete: ")
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM servers WHERE alias = ?', (alias,))
+    conn.commit()
+    if cursor.rowcount > 0:
+        print(f"Server {alias} deleted successfully.")
+    else:
+        print(f"No server found with alias {alias}.")
+    conn.close()
+
+def connect_to_server(alias):
+    """Launch SSH session using alias from the database."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT hostname, username, port, ssh_key FROM servers WHERE alias = ?', (alias,))
+    server = cursor.fetchone()
+    conn.close()
+
+    if server:
+        hostname, username, port, ssh_key = server
+        ssh_command = ["ssh", f"{username}@{hostname}", "-p", str(port)]
+        if ssh_key:
+            ssh_command.extend(["-i", ssh_key])
+        subprocess.run(ssh_command)
+    else:
+        print(f"No server found with alias {alias}.")
+
+def import_config():
+    """Import servers from SSH config file."""
+    ssh_config_path = os.path.expanduser('~/.ssh/config')
+    if not os.path.exists(ssh_config_path):
+        print("No SSH config file found.")
+        return
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    with open(ssh_config_path, 'r') as f:
+        lines = f.readlines()
+
+    current_host = {}
+    for line in lines:
+        line = line.strip()
+        if line.startswith('Host '):
+            if current_host:
+                # Save the previous host if it doesn't exist in the database
+                save_host_to_db(current_host, cursor)
+            current_host = {'alias': line.split()[1], 'port': '22'}  # Default port is 22
+        elif line.startswith('HostName '):
+            current_host['hostname'] = line.split()[1]
+        elif line.startswith('User '):
+            current_host['username'] = line.split()[1]
+        elif line.startswith('Port '):
+            current_host['port'] = line.split()[1]
+        elif line.startswith('IdentityFile '):
+            current_host['ssh_key'] = line.split()[1]
+    
+    # Save the last host
+    if current_host:
+        save_host_to_db(current_host, cursor)
+
+    conn.commit()
+    conn.close()
+    print("Import from SSH config completed.")
+
+def save_host_to_db(host_info, cursor):
+    """Save host information to the database if it does not already exist."""
+    alias = host_info.get('alias')
+    hostname = host_info.get('hostname')
+    username = host_info.get('username')
+    port = host_info.get('port')
+    ssh_key = host_info.get('ssh_key', '')
+    environment = 'imported'
+    description = 'Imported from SSH config'
+
+    # Check if alias already exists
+    cursor.execute('SELECT alias FROM servers WHERE alias = ?', (alias,))
+    if cursor.fetchone():
+        print(f"Alias {alias} already exists. Skipping import.")
+    else:
+        cursor.execute('INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?, ?)', 
+                       (alias, hostname, username, port, ssh_key, environment, description))
+        print(f"Imported {alias} from SSH config.")
+
+def search_servers(query):
+    """Search for servers based on a query."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM servers WHERE alias LIKE ? OR hostname LIKE ? OR environment LIKE ? OR description LIKE ?", 
+                   ('%' + query + '%', '%' + query + '%', '%' + query + '%', '%' + query + '%'))
+    rows = cursor.fetchall()
+    if rows:
+        headers = ["Alias", "Hostname", "Username", "Port", "SSH Key", "Environment", "Description"]
+        print(tabulate(rows, headers=headers, tablefmt="grid"))
+    else:
+        print("No servers found matching your query.")
+    conn.close()
+
+def print_help():
+    """Prints help menu for the command line tool."""
+    help_text = """
+    SSH Manager Command Line Tool (sshmgr)
+
+    Usage:
+        sshmgr --list                  List all servers
+        sshmgr --add                   Add a new server
+        sshmgr --delete                Delete a server
+        sshmgr --connect ALIAS         Connect to a server by alias
+        sshmgr --import-config         Import servers from SSH config
+        sshmgr --search QUERY          Search for servers by alias, hostname, environment, or description
+        sshmgr --help                  Display this help message
+
+    Examples:
+        sshmgr --list
+        sshmgr --add
+        sshmgr --delete
+        sshmgr --connect myserver
+        sshmgr --import-config
+        sshmgr --search production
+
+    """
+    print(help_text)
+
+def main():
+    parser = argparse.ArgumentParser(description="Manage and SSH into servers.", add_help=False)
+    parser.add_argument('--list', action='store_true', help='List all servers')
+    parser.add_argument('--add', action='store_true', help='Add a new server')
+    parser.add_argument('--delete', action='store_true', help='Delete a server')
+    parser.add_argument('--connect', type=str, help='Connect to a server by alias')
+    parser.add_argument('--import-config', action='store_true', help='Import servers from SSH config')
+    parser.add_argument('--search', type=str, help='Search for servers by alias, hostname, environment, or description')
+    parser.add_argument('--help', action='store_true', help='Display the help menu')
+
+    args = parser.parse_args()
+
+    init_db()
+
+    if args.help:
+        print_help()
+    elif args.list:
+        list_servers()
+    elif args.add:
+        add_server()
+    elif args.delete:
+        delete_server()
+    elif args.connect:
+        connect_to_server(args.connect)
+    elif args.import_config:
+        import_config()
+    elif args.search:
+        search_servers(args.search)
+    else:
+        print_help()
+
+if __name__ == "__main__":
+    main()
