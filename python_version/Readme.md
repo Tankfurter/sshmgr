@@ -35,12 +35,12 @@ cd sshmgr
 2. **Make the Script Executable**:
 
 ```bash
-chmod +x sshmgr.py
+chmod +x sshmgr
 ```
 
-3. **Add to PATH (Optional)**:
+1. **Add to PATH (Optional)**:
 
-   For easier access, add the directory containing `sshmgr.py` to your system's `PATH`, or move the script to a directory already in your `PATH`.
+   For easier access, add the directory containing `sshmgr` to your system's `PATH`, or move the script to a directory already in your `PATH`.
 
 ## Usage
 
@@ -49,68 +49,68 @@ Run the script with the appropriate command-line flags:
 ### List Servers
 
 ```bash
-./sshmgr.py --list
+./sshmgr --list
 ```
 
 ### Add a New Server
 
 ```bash
-./sshmgr.py --add
+./sshmgr --add
 ```
 
 ### Delete a Server
 
 ```bash
-./sshmgr.py --delete
+./sshmgr --delete
 ```
 
 ### Connect to a Server by Alias
 
 ```bash
-./sshmgr.py --connect <alias>
+./sshmgr --connect <alias>
 ```
 
 ### Import Servers from SSH Config
 
 ```bash
-./sshmgr.py --import-config
+./sshmgr --import-config
 ```
 
 ### Search for Servers
 
 ```bash
-./sshmgr.py --search <query>
+./sshmgr --search <query>
 ```
 
 ### Display Help Menu
 
 ```bash
-./sshmgr.py --help
+./sshmgr --help
 ```
 
 ## Examples
 
 - **Add a New Server**:
 ```bash
-./sshmgr.py --add
+./sshmgr --add
 ```
   Follow the interactive prompts to input server details.
 
 - **Connect to a Server**:
 ```bash
-./sshmgr.py --connect myserver
+./sshmgr --connect myserver
 ```
   Connects to the server with alias `myserver`.
 
 - **Import SSH Configurations**:
 ```bash
-./sshmgr.py --import-config
+./sshmgr --import-config
 ```
   Imports SSH hosts from the user's SSH config file (`~/.ssh/config`).
 
 - **Search for Servers**:
 ```bash
-./sshmgr.py --search production
+./sshmgr --search production
 ```
   Searches for servers containing the term "production" in their details.
 
@@ -124,7 +124,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgements
 
-- [Python](https://www.python.org/)
+- [Python](https://wwwthon.org/)
 - [SQLite](https://www.sqlite.org/)
 - [tabulate](https://pypi.org/project/tabulate/)
 
